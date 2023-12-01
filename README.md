@@ -7,27 +7,13 @@
 [![codecov](https://codecov.io/gh/andy-sweet/napari-transforms/branch/main/graph/badge.svg)](https://codecov.io/gh/andy-sweet/napari-transforms)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-transforms)](https://napari-hub.org/plugins/napari-transforms)
 
-Allows napari layer transform parameters to be edited manually
+Edit napari layer transform parameters manually
 
 ----------------------------------
 
-This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.
-
-<!--
-Don't miss the full getting started guide to set up your new package:
-https://github.com/napari/cookiecutter-napari-plugin#getting-started
-
-and review the napari docs for plugin developers:
-https://napari.org/stable/plugins/index.html
--->
+This is a work-in-progress and not ready for public consumption yet!
 
 ## Installation
-
-You can install `napari-transforms` via [pip]:
-
-    pip install napari-transforms
-
-
 
 To install latest development version :
 
@@ -47,6 +33,10 @@ Distributed under the terms of the [MIT] license,
 ## Issues
 
 If you encounter any problems, please [file an issue] along with a detailed description.
+
+## Acknowledgments
+
+This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.
 
 [napari]: https://github.com/napari/napari
 [Cookiecutter]: https://github.com/audreyr/cookiecutter
