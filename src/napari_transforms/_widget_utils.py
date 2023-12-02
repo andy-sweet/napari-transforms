@@ -22,7 +22,8 @@ class DoubleLineEdit(CompactLineEdit):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
-        self.setValidator(QDoubleValidator())
+        self._validator = QDoubleValidator()
+        self.setValidator(self._validator)
         self.editingFinished.connect(self.valueChanged)
 
     def minimumSizeHint(self) -> QSize:
@@ -35,7 +36,7 @@ class DoubleLineEdit(CompactLineEdit):
 
     def setValue(self, value: float) -> None:
         text = str(value)
-        state, text, _ = self.validator().validate(text, 0)
+        state, text, _ = self._validator.validate(text, 0)
         if state != QValidator.State.Acceptable:
             raise ValueError("Value is invalid.")
         if text != self.text():

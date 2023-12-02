@@ -48,20 +48,19 @@ class TransformsWidget(QWidget):
 
         self._on_selected_layers_changed()
 
+    def _add_attribute_row(self, name: str, widget: QWidget) -> None:
+        layout = self._attribute_widget.layout()
+        row = layout.rowCount()
+        label = QLabel(name)
+        label.setBuddy(widget)
+        layout.addWidget(label, row, 0)
+        layout.addWidget(widget, row, 1)
+
     def _on_selected_layers_changed(self) -> None:
         layer = None
         if len(self._viewer.layers.selection) == 1:
             layer = next(iter(self._viewer.layers.selection))
-        self.set_selected_layer(layer)
 
-    def _remove_dock_widget(self) -> None:
-        # To constrain our implementation and for testing, we only want
-        # the type of _viewer to be ViewerModel and not Viewer.
-        # This works around that typing information.
-        if window := getattr(self._viewer, "window", None):
-            window.remove_dock_widget(self)
-
-    def set_selected_layer(self, layer: Optional["Layer"]) -> None:
         if layer == self._selected_layer:
             return
 
@@ -76,14 +75,6 @@ class TransformsWidget(QWidget):
 
         self._transform_widget.set_selected_layer(layer)
         self._selected_layer = layer
-
-    def _add_attribute_row(self, name: str, widget: QWidget) -> None:
-        layout = self._attribute_widget.layout()
-        row = layout.rowCount()
-        label = QLabel(name)
-        label.setBuddy(widget)
-        layout.addWidget(label, row, 0)
-        layout.addWidget(widget, row, 1)
 
     def _on_selected_layer_name_changed(self, event) -> None:
         self.name.setText(event.source.name)
