@@ -36,8 +36,8 @@ class TransformsWidget(QWidget):
         self._attribute_widget.setLayout(self._attribute_layout)
 
         self.name = QLineEdit()
-        self._add_attribute_row("Layer name", self.name)
-        self.name.textChanged.connect(self._on_name_changed)
+        self.name.setReadOnly(True)
+        self._add_attribute_row("Layer", self.name)
 
         self._transform_widget = TransformWidget(napari_viewer)
         self._add_attribute_row("Transforms", self._transform_widget)
@@ -45,6 +45,8 @@ class TransformsWidget(QWidget):
         self._viewer.layers.selection.events.changed.connect(
             self._on_selected_layers_changed
         )
+
+        self._on_selected_layers_changed()
 
     def _on_selected_layers_changed(self) -> None:
         layer = None
@@ -85,10 +87,6 @@ class TransformsWidget(QWidget):
 
     def _on_selected_layer_name_changed(self, event) -> None:
         self.name.setText(event.source.name)
-
-    def _on_name_changed(self) -> None:
-        if self._selected_layer is not None:
-            self._selected_layer.name = self.name.text()
 
 
 class TransformRow:
