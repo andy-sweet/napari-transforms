@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from qtpy.QtWidgets import (
     QGridLayout,
+    QGroupBox,
     QLabel,
     QLineEdit,
     QVBoxLayout,
@@ -25,36 +26,20 @@ class TransformsWidget(QWidget):
         super().__init__()
         self._viewer = napari_viewer
         self._selected_layer = None
-        layout = QVBoxLayout()
-        self.setLayout(layout)
 
-        self._attribute_widget = QWidget()
-        layout.addWidget(self._attribute_widget)
-
-        self._attribute_layout = QGridLayout()
-        self._attribute_layout.setContentsMargins(0, 0, 0, 0)
-        self._attribute_widget.setLayout(self._attribute_layout)
-
-        self.name = QLineEdit()
-        self.name.setReadOnly(True)
-        self._add_attribute_row("Layer", self.name)
-
+        self._name_widget = NameWidget()
         self._transform_widget = TransformWidget(napari_viewer)
-        self._add_attribute_row("Transforms", self._transform_widget)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self._name_widget)
+        layout.addWidget(self._transform_widget)
+        self.setLayout(layout)
 
         self._viewer.layers.selection.events.changed.connect(
             self._on_selected_layers_changed
         )
 
         self._on_selected_layers_changed()
-
-    def _add_attribute_row(self, name: str, widget: QWidget) -> None:
-        layout = self._attribute_widget.layout()
-        row = layout.rowCount()
-        label = QLabel(name)
-        label.setBuddy(widget)
-        layout.addWidget(label, row, 0)
-        layout.addWidget(widget, row, 1)
 
     def _on_selected_layers_changed(self) -> None:
         layer = None
@@ -66,18 +51,36 @@ class TransformsWidget(QWidget):
 
         if self._selected_layer is not None:
             self._selected_layer.events.name.disconnect(
-                self._on_selected_layer_name_changed
+                self._name_widget.on_layer_name_changed
             )
 
         if layer is not None:
-            self.name.setText(layer.name)
-            layer.events.name.connect(self._on_selected_layer_name_changed)
+            layer.events.name.connect(self._name_widget.on_layer_name_changed)
 
+        self._name_widget.set_selected_layer(layer)
         self._transform_widget.set_selected_layer(layer)
         self._selected_layer = layer
 
-    def _on_selected_layer_name_changed(self, event) -> None:
-        self.name.setText(event.source.name)
+
+class NameWidget(QGroupBox):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.setTitle("Layer name")
+
+        self._edit = QLineEdit()
+        self._edit.setReadOnly(True)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self._edit)
+        self.setLayout(layout)
+
+    def set_selected_layer(self, layer: Optional["Layer"]) -> None:
+        name = layer.name if layer else ""
+        self._edit.setText(name)
+
+    def on_layer_name_changed(self, event) -> None:
+        self._edit.setText(event.source.name)
 
 
 class TransformRow:
@@ -92,16 +95,18 @@ class TransformRow:
         return (self.name, self.scale, self.translate)
 
 
-class TransformWidget(QWidget):
+class TransformWidget(QGroupBox):
     """Shows and controls all axes' names and transform parameters."""
 
     def __init__(self, viewer: "ViewerModel") -> None:
         super().__init__()
+
+        self.setTitle("Transform")
+
         self._viewer: "ViewerModel" = viewer
         self._layer: Optional["Layer"] = None
         self._rows: List[TransformRow] = []
         layout = QGridLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
 
         layout.addWidget(QLabel("Axis"), 0, 0)
         layout.addWidget(QLabel("Scale"), 0, 1)
