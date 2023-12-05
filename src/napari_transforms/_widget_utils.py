@@ -1,8 +1,56 @@
 from typing import Callable, List, Optional, Protocol, Tuple
 
+import numpy as np
 from qtpy.QtCore import QSize, Qt, Signal
 from qtpy.QtGui import QDoubleValidator, QValidator
-from qtpy.QtWidgets import QGridLayout, QLineEdit, QWidget
+from qtpy.QtWidgets import (
+    QGridLayout,
+    QLineEdit,
+    QTableWidget,
+    QTableWidgetItem,
+    QWidget,
+)
+
+
+class MatrixEdit(QTableWidget):
+    arrayChanged = Signal(object)
+    _array: np.ndarray
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self._array = np.zeros((0, 0), dtype=float)
+        self.cellChanged.connect(self._onCellChanged)
+
+    def setArray(
+        self, array: np.ndarray, *, editable: Optional[np.ndarray]
+    ) -> None:
+        assert array.ndim == 2
+        if editable is None:
+            editable = np.ones(array.shape, dtype=bool)
+        assert editable.shape == array.shape
+        self.clear()
+        self._array = np.array(array, dtype=float, copy=True)
+        self.setRowCount(array.shape[0])
+        self.setColumnCount(array.shape[1])
+        for r in range(self.rowCount()):
+            for c in range(self.columnCount()):
+                item = QTableWidgetItem(str(array[r, c]))
+                self.setItem(r, c, item)
+                flags = item.flags()
+                if not editable[r, c]:
+                    flags &= ~Qt.ItemFlag.ItemIsEditable
+                item.setFlags(flags)
+        self.resizeColumnsToContents()
+
+    def getArray(self) -> np.ndarray:
+        return self._array
+
+    def _onCellChanged(self, row: int, column: int) -> None:
+        if item := self.item(row, column):
+            data = item.data(Qt.ItemDataRole.DisplayRole)
+            value = float(data)
+            self._array[row, column] = value
+            self.arrayChanged.emit(self._array)
 
 
 class CompactLineEdit(QLineEdit):

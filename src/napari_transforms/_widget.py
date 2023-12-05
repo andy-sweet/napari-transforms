@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
+import numpy as np
 from qtpy.QtWidgets import (
     QGridLayout,
     QGroupBox,
@@ -11,6 +12,7 @@ from qtpy.QtWidgets import (
 
 from napari_transforms._widget_utils import (
     DoubleLineEdit,
+    MatrixEdit,
     readonly_lineedit,
     set_row_visible,
     update_num_rows,
@@ -29,10 +31,12 @@ class TransformsWidget(QWidget):
 
         self._name_widget = NameWidget()
         self._transform_widget = TransformWidget(napari_viewer)
+        self._affine_widget = AffineWidget()
 
         layout = QVBoxLayout()
         layout.addWidget(self._name_widget)
         layout.addWidget(self._transform_widget)
+        layout.addWidget(self._affine_widget)
         self.setLayout(layout)
 
         self._viewer.layers.selection.events.changed.connect(
@@ -57,9 +61,53 @@ class TransformsWidget(QWidget):
         if layer is not None:
             layer.events.name.connect(self._name_widget.on_layer_name_changed)
 
-        self._name_widget.set_selected_layer(layer)
-        self._transform_widget.set_selected_layer(layer)
+        self._name_widget.set_layer(layer)
+        self._transform_widget.set_layer(layer)
+        self._affine_widget.set_layer(layer)
         self._selected_layer = layer
+
+
+class AffineWidget(QGroupBox):
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.setTitle("Affine matrix")
+
+        self._edit = MatrixEdit()
+        self._edit.arrayChanged.connect(self._on_array_changed)
+
+        self._layer = None
+
+        layout = QVBoxLayout()
+        layout.addWidget(self._edit)
+        self.setLayout(layout)
+
+    def set_layer(self, layer: Optional["Layer"]) -> None:
+        if layer is self._layer:
+            return
+        old_layer = self._layer
+        if old_layer is not None:
+            old_layer.events.affine.disconnect(self._on_layer_affine_changed)
+        if layer is not None:
+            self._set_array(layer.affine.affine_matrix)
+            layer.events.affine.connect(self._on_layer_affine_changed)
+        self._layer = layer
+
+    def _set_array(self, array: np.ndarray) -> None:
+        editable = np.ones(array.shape, dtype=bool)
+        editable[-1, :] = False
+        self._edit.setArray(array, editable=editable)
+        self.updateGeometry()
+
+    def _on_array_changed(self, array: np.ndarray) -> None:
+        if self._layer is not None:
+            with self._layer.events.affine.blocker(
+                self._on_layer_affine_changed
+            ):
+                self._layer.affine = array
+
+    def _on_layer_affine_changed(self) -> None:
+        self._set_array(self._layer.affine.affine_matrix)
 
 
 class NameWidget(QGroupBox):
@@ -75,7 +123,7 @@ class NameWidget(QGroupBox):
         layout.addWidget(self._edit)
         self.setLayout(layout)
 
-    def set_selected_layer(self, layer: Optional["Layer"]) -> None:
+    def set_layer(self, layer: Optional["Layer"]) -> None:
         name = layer.name if layer else ""
         self._edit.setText(name)
 
@@ -118,7 +166,7 @@ class TransformWidget(QGroupBox):
             self._on_viewer_dims_axis_labels_changed
         )
 
-    def set_selected_layer(self, layer: Optional["Layer"]) -> None:
+    def set_layer(self, layer: Optional["Layer"]) -> None:
         dims = self._viewer.dims
         update_num_rows(
             rows=self._rows,
