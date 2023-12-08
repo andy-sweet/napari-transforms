@@ -161,9 +161,12 @@ class NameWidget(QGroupBox):
     def __init__(self) -> None:
         super().__init__()
 
-        self.setTitle("Layer name")
+        self.setTitle("Selected layer")
 
         self._edit = QLineEdit()
+        self._edit.setPlaceholderText(
+            "Select a layer from napari's layer list"
+        )
         self._edit.setReadOnly(True)
 
         layout = QVBoxLayout()
