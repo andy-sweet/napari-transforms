@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Tuple
 
 import numpy as np
 from qtpy.QtWidgets import (
@@ -46,6 +46,9 @@ class TransformsWidget(QWidget):
         self._viewer.layers.selection.events.changed.connect(
             self._on_selected_layers_changed
         )
+        self._viewer.dims.events.axis_labels.connect(
+            self._on_axis_labels_changed
+        )
 
         self._on_selected_layers_changed()
 
@@ -71,6 +74,21 @@ class TransformsWidget(QWidget):
         self._shear_widget.set_layer(layer)
         self._affine_widget.set_layer(layer)
         self._selected_layer = layer
+
+        self._on_axis_labels_changed()
+
+    def _on_axis_labels_changed(self) -> None:
+        layer = self._selected_layer
+        if layer is None:
+            return
+        layer_axes = self._viewer.dims.axis_labels[-layer.ndim :]
+        for w in (
+            self._scale_widget,
+            self._translate_widget,
+            self._shear_widget,
+            self._affine_widget,
+        ):
+            w.setAxes(layer_axes)
 
 
 class NameWidget(QGroupBox):
@@ -222,6 +240,10 @@ class AffineWidget(MatrixEdit):
             self._set_array(layer.affine.affine_matrix)
             layer.events.affine.connect(self._on_layer_affine_changed)
         self._layer = layer
+
+    def setAxes(self, axes: Tuple[str, ...]) -> None:
+        # For homogeneous coordinate.
+        super().setAxes(axes + ("",))
 
     def _set_array(self, array: np.ndarray) -> None:
         editable = np.ones(array.shape, dtype=bool)

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 from qtpy.QtCore import Qt, Signal
@@ -19,6 +19,7 @@ class VectorEdit(QTableWidget):
         super().__init__(parent)
         self._array = np.zeros((0,), dtype=float)
         self.cellChanged.connect(self._onCellChanged)
+        self.verticalHeader().setVisible(False)
         # Based on answer at:
         # https://stackoverflow.com/questions/75025334/remove-empty-space-at-bottom-of-qtablewidget
         self.setSizeAdjustPolicy(
@@ -52,6 +53,10 @@ class VectorEdit(QTableWidget):
 
     def getArray(self) -> np.ndarray:
         return self._array
+
+    def setAxes(self, axes: Tuple[str, ...]) -> None:
+        assert len(axes) == len(self._array)
+        self.setHorizontalHeaderLabels(axes)
 
     def _onCellChanged(self, row: int, column: int) -> None:
         assert row == 0
@@ -102,6 +107,11 @@ class MatrixEdit(QTableWidget):
 
     def getArray(self) -> np.ndarray:
         return self._array
+
+    def setAxes(self, axes: Tuple[str, ...]) -> None:
+        assert len(axes) == self._array.shape[0] == self._array.shape[1]
+        self.setHorizontalHeaderLabels(axes)
+        self.setVerticalHeaderLabels(axes)
 
     def _onCellChanged(self, row: int, column: int) -> None:
         if item := self.item(row, column):
