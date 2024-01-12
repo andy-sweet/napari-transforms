@@ -2,8 +2,10 @@ from typing import TYPE_CHECKING, Optional, Tuple
 
 import numpy as np
 from qtpy.QtWidgets import (
-    QGroupBox,
+    QHBoxLayout,
+    QLabel,
     QLineEdit,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -50,6 +52,10 @@ class TransformsWidget(QWidget):
             self._on_axis_labels_changed
         )
 
+        self._name_widget.apply_all_layers.clicked.connect(
+            self._on_apply_clicked
+        )
+
         self._on_selected_layers_changed()
 
     def _on_selected_layers_changed(self) -> None:
@@ -90,19 +96,42 @@ class TransformsWidget(QWidget):
         ):
             w.setAxes(layer_axes)
 
+    # TODO: make this a slot
+    def _on_apply_clicked(self, event) -> None:
+        if self._selected_layer is None:
+            return
+        similar_layers = (
+            layer
+            for layer in self._viewer.layers
+            if layer.ndim == self._selected_layer.ndim
+        )
+        for layer in similar_layers:
+            layer.scale = self._selected_layer.scale
+            layer.translate = self._selected_layer.translate
+            layer.rotate = self._selected_layer.rotate
+            layer.shear = self._selected_layer.shear
+            layer.affine = self._selected_layer.affine
 
-class NameWidget(QGroupBox):
+
+class NameWidget(QWidget):
     def __init__(self) -> None:
         super().__init__()
-        self.setTitle("Selected layer")
+        layer_layout = QHBoxLayout()
+
+        label = QLabel("Selected layer:")
         self._edit = QLineEdit()
         self._edit.setPlaceholderText(
             "Select a layer from napari's layer list"
         )
         self._edit.setReadOnly(True)
+        layer_layout.addWidget(label)
+        layer_layout.addWidget(self._edit)
+
+        self.apply_all_layers = QPushButton("Apply to similar layers")
 
         layout = QVBoxLayout()
-        layout.addWidget(self._edit)
+        layout.addLayout(layer_layout)
+        layout.addWidget(self.apply_all_layers)
         self.setLayout(layout)
 
     def set_layer(self, layer: Optional["Layer"]) -> None:
@@ -220,8 +249,14 @@ class ShearWidget(MatrixEdit):
                 self._layer.shear = array
 
     def _on_layer_shear_changed(self) -> None:
-        # TODO: support 2D layers as a special case.
-        self._set_array(self._layer.shear)
+        # Shear can be the upper triangle values (in a vector)
+        # or the matrix itself. Always make it a matrix.
+        shear = self._layer.shear
+        if shear.ndim == 1:
+            shear_matrix = np.eye(self._layer.ndim)
+            shear_matrix[np.triu_indices(self._layer.ndim, k=1)] = shear
+            shear = shear_matrix
+        self._set_array(shear)
 
 
 class AffineWidget(MatrixEdit):
