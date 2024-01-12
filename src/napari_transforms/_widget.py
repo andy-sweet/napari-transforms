@@ -27,20 +27,23 @@ class TransformsWidget(QWidget):
         self._name_widget = NameWidget()
         self._scale_widget = ScaleWidget()
         self._translate_widget = TranslateWidget()
+        self._rotate_widget = RotateWidget()
         self._shear_widget = ShearWidget()
         self._affine_widget = AffineWidget()
 
         scale = _Collapsible("scale", self._scale_widget)
         translate = _Collapsible("translate", self._translate_widget)
+        rotate = _Collapsible("rotate", self._rotate_widget)
         shear = _Collapsible("shear", self._shear_widget)
         affine = _Collapsible("affine", self._affine_widget)
-        for w in (scale, translate, shear, affine):
+        for w in (scale, translate, rotate, shear, affine):
             w.expand(animate=False)
 
         layout = QVBoxLayout()
         layout.addWidget(self._name_widget)
         layout.addWidget(scale)
         layout.addWidget(translate)
+        layout.addWidget(rotate)
         layout.addWidget(shear)
         layout.addWidget(affine)
         self.setLayout(layout)
@@ -51,7 +54,6 @@ class TransformsWidget(QWidget):
         self._viewer.dims.events.axis_labels.connect(
             self._on_axis_labels_changed
         )
-
         self._name_widget.apply_all_layers.clicked.connect(
             self._on_apply_clicked
         )
@@ -77,6 +79,7 @@ class TransformsWidget(QWidget):
         self._name_widget.set_layer(layer)
         self._scale_widget.set_layer(layer)
         self._translate_widget.set_layer(layer)
+        self._rotate_widget.set_layer(layer)
         self._shear_widget.set_layer(layer)
         self._affine_widget.set_layer(layer)
         self._selected_layer = layer
@@ -91,6 +94,7 @@ class TransformsWidget(QWidget):
         for w in (
             self._scale_widget,
             self._translate_widget,
+            self._rotate_widget,
             self._shear_widget,
             self._affine_widget,
         ):
@@ -217,6 +221,37 @@ class ScaleWidget(VectorEdit):
         self._set_array(self._layer.scale)
 
 
+class RotateWidget(MatrixEdit):
+    def __init__(self) -> None:
+        super().__init__()
+        self._layer = None
+        self.arrayChanged.connect(self._on_array_changed)
+
+    def set_layer(self, layer: Optional["Layer"]) -> None:
+        if layer is self._layer:
+            return
+        old_layer = self._layer
+        if old_layer is not None:
+            old_layer.events.rotate.disconnect(self._on_layer_rotate_changed)
+        if layer is not None:
+            self._set_array(layer.rotate)
+            layer.events.rotate.connect(self._on_layer_rotate_changed)
+        self._layer = layer
+
+    def _set_array(self, array: np.ndarray) -> None:
+        self.setArray(array)
+
+    def _on_array_changed(self, array: np.ndarray) -> None:
+        if self._layer is not None:
+            with self._layer.events.rotate.blocker(
+                self._on_layer_rotate_changed
+            ):
+                self._layer.rotate = array
+
+    def _on_layer_rotate_changed(self) -> None:
+        self._set_array(self._layer.rotate)
+
+
 class ShearWidget(MatrixEdit):
     def __init__(self) -> None:
         super().__init__()
@@ -230,9 +265,8 @@ class ShearWidget(MatrixEdit):
         if old_layer is not None:
             old_layer.events.shear.disconnect(self._on_layer_shear_changed)
         if layer is not None:
-            array = np.eye(layer.ndim)
-            array[np.triu_indices(layer.ndim, 1)] = layer.shear
-            self._set_array(array)
+            shear = _shear_matrix(layer)
+            self._set_array(shear)
             layer.events.shear.connect(self._on_layer_shear_changed)
         self._layer = layer
 
@@ -251,12 +285,18 @@ class ShearWidget(MatrixEdit):
     def _on_layer_shear_changed(self) -> None:
         # Shear can be the upper triangle values (in a vector)
         # or the matrix itself. Always make it a matrix.
-        shear = self._layer.shear
-        if shear.ndim == 1:
-            shear_matrix = np.eye(self._layer.ndim)
-            shear_matrix[np.triu_indices(self._layer.ndim, k=1)] = shear
-            shear = shear_matrix
+        shear = _shear_matrix(self._layer)
         self._set_array(shear)
+
+
+def _shear_matrix(layer: "Layer") -> np.ndarray:
+    shear = layer.shear
+    ndim = layer.ndim
+    if shear.ndim == 1:
+        shear_matrix = np.eye(ndim)
+        shear_matrix[np.triu_indices(ndim, k=1)] = shear
+        return shear_matrix
+    return shear
 
 
 class AffineWidget(MatrixEdit):
