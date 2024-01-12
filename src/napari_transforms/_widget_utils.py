@@ -14,6 +14,7 @@ from qtpy.QtWidgets import (
 class VectorEdit(QTableWidget):
     arrayChanged = Signal(object)
     _array: np.ndarray
+    _axes: Tuple[str, ...]
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -28,6 +29,9 @@ class VectorEdit(QTableWidget):
         self.setSizePolicy(
             self.sizePolicy().horizontalPolicy(), QSizePolicy.Policy.Preferred
         )
+
+    def getArray(self) -> np.ndarray:
+        return self._array
 
     def setArray(
         self, array: np.ndarray, *, editable: Optional[np.ndarray] = None
@@ -51,11 +55,12 @@ class VectorEdit(QTableWidget):
         self.resizeColumnsToContents()
         self.resizeRowsToContents()
 
-    def getArray(self) -> np.ndarray:
-        return self._array
+    def getAxes(self) -> Tuple[str, ...]:
+        return self._axes
 
     def setAxes(self, axes: Tuple[str, ...]) -> None:
         assert len(axes) == len(self._array)
+        self._axes = axes
         self.setHorizontalHeaderLabels(axes)
 
     def _onCellChanged(self, row: int, column: int) -> None:
@@ -70,6 +75,7 @@ class VectorEdit(QTableWidget):
 class MatrixEdit(QTableWidget):
     arrayChanged = Signal(object)
     _array: np.ndarray
+    _axes: Tuple[str, ...]
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -81,6 +87,9 @@ class MatrixEdit(QTableWidget):
         self.setSizePolicy(
             self.sizePolicy().horizontalPolicy(), QSizePolicy.Policy.Preferred
         )
+
+    def getArray(self) -> np.ndarray:
+        return self._array
 
     def setArray(
         self, array: np.ndarray, *, editable: Optional[np.ndarray] = None
@@ -105,11 +114,12 @@ class MatrixEdit(QTableWidget):
         self.resizeColumnsToContents()
         self.resizeRowsToContents()
 
-    def getArray(self) -> np.ndarray:
-        return self._array
+    def getAxes(self) -> Tuple[str, ...]:
+        return self._axes
 
     def setAxes(self, axes: Tuple[str, ...]) -> None:
         assert len(axes) == self._array.shape[0] == self._array.shape[1]
+        self._axes = axes
         self.setHorizontalHeaderLabels(axes)
         self.setVerticalHeaderLabels(axes)
 

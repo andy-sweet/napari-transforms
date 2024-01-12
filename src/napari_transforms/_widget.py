@@ -258,4 +258,6 @@ class AffineWidget(MatrixEdit):
                 self._layer.affine = array
 
     def _on_layer_affine_changed(self) -> None:
+        axes = self.getAxes()
         self._set_array(self._layer.affine.affine_matrix)
+        super().setAxes(axes)
